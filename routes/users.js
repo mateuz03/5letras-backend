@@ -9,9 +9,12 @@ router.post('/register', userController.registerUser);
 // POST /api/users/login (rota pública)
 router.post('/login', userController.loginUser);
 
-// --- ROTA ADICIONADA ---
 // GET /api/users/me (rota protegida)
-// O 'auth' vai rodar primeiro, verificar o token, e nos dar o 'req.user'
 router.get('/me', auth, userController.getUserProfile);
+
+// --- ROTA ADICIONADA ---
+// PUT /api/users/me (rota protegida)
+// Usamos a mesma rota '/me', mas com o método PUT
+router.put('/me', auth, userController.updateUserProfile);
 
 module.exports = router;
