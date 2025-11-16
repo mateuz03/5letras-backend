@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Lógica de Cadastro
+// Lógica de Cadastro (sem alteração)
 exports.registerUser = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -13,13 +13,13 @@ exports.registerUser = asyncHandler(async (req, res) => {
     const userExists = await User.findOne({ email });
     if (userExists) {
         res.status(400);
-        throw new Error('Usuário com este e-mail já existe.');
+        throw new Error('Utilizador com este e-mail já existe.');
     }
     const user = await User.create({ name, email, password });
-    res.status(201).json({ message: 'Usuário criado com sucesso!', id: user.id });
+    res.status(201).json({ message: 'Utilizador criado com sucesso!', id: user.id });
 });
 
-// Lógica de Login
+// Lógica de Login (sem alteração)
 exports.loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
@@ -36,10 +36,10 @@ exports.loginUser = asyncHandler(async (req, res) => {
 
 // --- FUNÇÃO ADICIONADA ---
 // GET /api/users/me
-// Busca os dados do usuário logado (protegido)
+// Busca os dados do utilizador logado (protegido)
 exports.getUserProfile = asyncHandler(async (req, res) => {
     // Nós temos o 'req.user.id' graças ao nosso middleware 'auth'
-    // .select('-password') remove a senha da resposta, por segurança
+    // .select('-password') remove a palavra-passe da resposta, por segurança
     const user = await User.findById(req.user.id).select('-password');
 
     if (user) {
@@ -51,6 +51,6 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
         });
     } else {
         res.status(404);
-        throw new Error('Usuário não encontrado.');
+        throw new Error('Utilizador não encontrado.');
     }
 });
