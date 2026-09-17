@@ -3,14 +3,35 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Lógica de Cadastro (sem alteração)
+// Lógica de Cadastro
 exports.registerUser = asyncHandler(async (req, res) => {
-    // ... (código existente)
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+        res.status(400);
+        throw new Error('Por favor, preencha todos os campos.');
+    }
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+        res.status(400);
+        throw new Error('Usuário com este e-mail já existe.');
+    }
+    const user = await User.create({ name, email, password });
+    res.status(201).json({ message: 'Usuário criado com sucesso!', id: user.id });
 });
 
-// Lógica de Login (sem alteração)
+// Lógica de Login
 exports.loginUser = asyncHandler(async (req, res) => {
-    // ... (código existente)
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+        const payload = { user: { id: user.id } };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' });
+        res.json({ token });
+    } else {
+        res.status(401);
+        throw new Error('Credenciais inválidas.');
+    }
 });
 
 // Busca os dados do usuário logado (sem alteração)
