@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest --runInBand",
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "migrate:prices": "node scripts/migrate-prices.js"
   },
   "jest": {
     "testEnvironment": "node",

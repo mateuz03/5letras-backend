@@ -22,4 +22,7 @@ const motelSchema = new mongoose.Schema({
     suites: [suiteSchema] // Um motel tem uma lista de suítes
 });
 
+// Índice de texto para busca por nome e localização (?search=)
+motelSchema.index({ name: 'text', location: 'text' });
+
 module.exports = mongoose.model('Motel', motelSchema);

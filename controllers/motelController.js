@@ -1,10 +1,53 @@
 const Motel = require('../models/Motel');
 const asyncHandler = require('express-async-handler');
 
-// GET - Busca todos os motéis (Já existia)
+// GET - Lista motéis com paginação e filtros:
+//   ?page=1&limit=12          paginação
+//   ?search=texto             busca no índice de texto (nome + localização)
+//   ?location=Texto           localização parcial (case-insensitive)
+//   ?category=Luxo            categoria exata
+//   ?minPrice=100&maxPrice=250  faixa de preço das suítes
 exports.getAllMotels = asyncHandler(async (req, res) => {
-    const motels = await Motel.find();
-    res.json(motels);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 12);
+    const filter = {};
+
+    if (req.query.search) {
+        filter.$text = { $search: req.query.search };
+    }
+    if (req.query.location) {
+        filter.location = { $regex: req.query.location, $options: 'i' };
+    }
+    if (req.query.category) {
+        filter.categories = req.query.category;
+    }
+
+    const priceFilter = {};
+    if (req.query.minPrice) priceFilter.$gte = Number(req.query.minPrice);
+    if (req.query.maxPrice) priceFilter.$lte = Number(req.query.maxPrice);
+    if (Object.keys(priceFilter).length > 0) {
+        filter.suites = { $elemMatch: { price: priceFilter } };
+    }
+
+    const total = await Motel.countDocuments(filter);
+
+    let query = Motel.find(filter);
+    if (req.query.search) {
+        query = query.sort({ score: { $meta: 'textScore' } });
+    }
+    const motels = await query
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+    res.json({
+        motels,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+        }
+    });
 });
 
 // GET - Busca um motel por ID (Já existia)
