@@ -17,4 +17,7 @@ router.get('/me', auth, userController.getUserProfile);
 // Usamos a mesma rota '/me', mas com o método PUT
 router.put('/me', auth, userController.updateUserProfile);
 
+// GET /api/users/leaderboard (rota pública) - ranking de pontos
+router.get('/leaderboard', userController.getLeaderboard);
+
 module.exports = router;

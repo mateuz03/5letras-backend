@@ -80,6 +80,70 @@ describe('Rating do motel', () => {
     });
 });
 
+describe('PUT e DELETE /api/reviews/:id', () => {
+    test('autor edita a própria avaliação e o rating é recalculado', async () => {
+        const token = await registerAndLogin('editor@test.com');
+        const motel = await criarMotel();
+
+        const created = await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token)
+            .send({ motelId: motel._id.toString(), rating: 3, comment: 'Regular' });
+
+        const res = await request(app)
+            .put(`/api/reviews/${created.body._id}`)
+            .set('x-auth-token', token)
+            .send({ rating: 5, comment: 'Melhorou muito' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.rating).toBe(5);
+
+        const updatedMotel = await Motel.findById(motel._id);
+        expect(updatedMotel.rating).toBe(5);
+    });
+
+    test('retorna 403 para não autor', async () => {
+        const tokenAutor = await registerAndLogin('autor@test.com');
+        const tokenOutro = await registerAndLogin('naoautor@test.com');
+        const motel = await criarMotel();
+
+        const created = await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', tokenAutor)
+            .send({ motelId: motel._id.toString(), rating: 4, comment: 'Bom' });
+
+        const res = await request(app)
+            .put(`/api/reviews/${created.body._id}`)
+            .set('x-auth-token', tokenOutro)
+            .send({ rating: 1 });
+
+        expect(res.status).toBe(403);
+    });
+
+    test('autor remove a avaliação e o rating é recalculado', async () => {
+        const token1 = await registerAndLogin('remove1@test.com');
+        const token2 = await registerAndLogin('remove2@test.com');
+        const motel = await criarMotel();
+
+        const r1 = await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token1)
+            .send({ motelId: motel._id.toString(), rating: 5, comment: 'Excelente' });
+        await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token2)
+            .send({ motelId: motel._id.toString(), rating: 3, comment: 'Ok' });
+
+        const res = await request(app)
+            .delete(`/api/reviews/${r1.body._id}`)
+            .set('x-auth-token', token1);
+        expect(res.status).toBe(200);
+
+        const updatedMotel = await Motel.findById(motel._id);
+        expect(updatedMotel.rating).toBe(3);
+    });
+});
+
 describe('GET /api/reviews/my-reviews', () => {
     test('retorna as avaliações do usuário com o nome do motel', async () => {
         const token = await registerAndLogin('aval4@test.com');

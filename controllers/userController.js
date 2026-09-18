@@ -25,13 +25,22 @@ exports.loginUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-        const payload = { user: { id: user.id } };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' });
+        const payload = { user: { id: user.id, role: user.role } };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.json({ token });
     } else {
         res.status(401);
         throw new Error('Credenciais inválidas.');
     }
+});
+
+// Ranking dos usuários com mais pontos
+exports.getLeaderboard = asyncHandler(async (req, res) => {
+    const users = await User.find()
+        .select('name points')
+        .sort({ points: -1 })
+        .limit(10);
+    res.json(users);
 });
 
 // Busca os dados do usuário logado (sem alteração)
@@ -42,7 +51,8 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
-            points: user.points
+            points: user.points,
+            role: user.role
         });
     } else {
         res.status(404);
@@ -85,6 +95,7 @@ exports.updateUserProfile = asyncHandler(async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             points: updatedUser.points,
+            role: updatedUser.role,
         });
     } else {
         res.status(404);

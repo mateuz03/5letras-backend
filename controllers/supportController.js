@@ -18,3 +18,9 @@ exports.createSupportTicket = asyncHandler(async (req, res) => {
     const ticket = await newTicket.save();
     res.status(201).json(ticket);
 });
+
+// GET /api/support/my-tickets - tickets do usuário logado
+exports.getMyTickets = asyncHandler(async (req, res) => {
+    const tickets = await SupportTicket.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.json(tickets);
+});

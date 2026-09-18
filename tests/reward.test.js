@@ -12,6 +12,65 @@ async function criarUsuarioComPontos(email, pontos) {
     return token;
 }
 
+async function criarAdmin(email) {
+    await request(app)
+        .post('/api/users/register')
+        .send({ name: 'Admin', email, password: 'senha123' });
+    await User.updateOne({ email }, { role: 'admin' });
+    const res = await request(app)
+        .post('/api/users/login')
+        .send({ email, password: 'senha123' });
+    return res.body.token;
+}
+
+describe('Rotas admin de recompensas', () => {
+    test('usuário comum recebe 403 ao criar recompensa', async () => {
+        const token = await criarUsuarioComPontos('comum@test.com', 0);
+
+        const res = await request(app)
+            .post('/api/rewards')
+            .set('x-auth-token', token)
+            .send({ title: 'R', description: 'D', points: 10 });
+
+        expect(res.status).toBe(403);
+    });
+
+    test('admin cria e edita recompensa', async () => {
+        const adminToken = await criarAdmin('admin@test.com');
+
+        const created = await request(app)
+            .post('/api/rewards')
+            .set('x-auth-token', adminToken)
+            .send({ title: 'Desconto 20%', description: 'D', points: 100 });
+        expect(created.status).toBe(201);
+
+        const updated = await request(app)
+            .put(`/api/rewards/${created.body._id}`)
+            .set('x-auth-token', adminToken)
+            .send({ points: 150, isActive: false });
+
+        expect(updated.status).toBe(200);
+        expect(updated.body.points).toBe(150);
+        expect(updated.body.isActive).toBe(false);
+    });
+
+    test('recompensa desativada não aparece na listagem pública', async () => {
+        const adminToken = await criarAdmin('admin2@test.com');
+        const created = await request(app)
+            .post('/api/rewards')
+            .set('x-auth-token', adminToken)
+            .send({ title: 'Secreta', description: 'D', points: 100 });
+
+        await request(app)
+            .put(`/api/rewards/${created.body._id}`)
+            .set('x-auth-token', adminToken)
+            .send({ isActive: false });
+
+        const res = await request(app).get('/api/rewards');
+        expect(res.body).toHaveLength(0);
+    });
+});
+
 describe('GET /api/rewards', () => {
     test('lista apenas recompensas ativas, ordenadas por pontos', async () => {
         await Reward.create([

@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = function(req, res, next) {
-    // Pega o token do cabeçalho da requisição
-    const token = req.header('x-auth-token');
+    // Aceita "Authorization: Bearer <token>" (padrão) ou "x-auth-token" (legado)
+    const authHeader = req.header('Authorization');
+    const token = (authHeader && authHeader.startsWith('Bearer '))
+        ? authHeader.slice(7)
+        : req.header('x-auth-token');
 
     // Se não houver token, retorna erro
     if (!token) {

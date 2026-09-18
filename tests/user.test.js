@@ -84,6 +84,34 @@ describe('GET /api/users/me', () => {
     });
 });
 
+describe('Autenticação via Authorization Bearer', () => {
+    test('GET /me funciona com o header padrão Bearer', async () => {
+        const token = await registerAndLogin('bearer@test.com');
+
+        const res = await request(app)
+            .get('/api/users/me')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.email).toBe('bearer@test.com');
+    });
+});
+
+describe('GET /api/users/leaderboard', () => {
+    test('retorna os usuários ordenados por pontos', async () => {
+        await registerAndLogin('rank1@test.com');
+        await registerAndLogin('rank2@test.com');
+        await User.updateOne({ email: 'rank1@test.com' }, { points: 50 });
+        await User.updateOne({ email: 'rank2@test.com' }, { points: 200 });
+
+        const res = await request(app).get('/api/users/leaderboard');
+
+        expect(res.status).toBe(200);
+        expect(res.body[0].points).toBe(200);
+        expect(res.body[0].password).toBeUndefined();
+    });
+});
+
 describe('PUT /api/users/me', () => {
     test('retorna 400 ao tentar usar e-mail já cadastrado por outro usuário', async () => {
         const token = await registerAndLogin('fabio@test.com');

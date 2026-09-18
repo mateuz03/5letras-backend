@@ -8,6 +8,38 @@ exports.getAllRewards = asyncHandler(async (req, res) => {
     res.json(rewards);
 });
 
+// POST /api/rewards (admin) - cria recompensa
+exports.createReward = asyncHandler(async (req, res) => {
+    const { title, description, points } = req.body;
+
+    if (!title || !description || !points) {
+        res.status(400);
+        throw new Error('Título, descrição e pontos são obrigatórios.');
+    }
+
+    const reward = await Reward.create({ title, description, points });
+    res.status(201).json(reward);
+});
+
+// PUT /api/rewards/:id (admin) - edita ou desativa recompensa
+exports.updateReward = asyncHandler(async (req, res) => {
+    const reward = await Reward.findById(req.params.id);
+
+    if (!reward) {
+        res.status(404);
+        throw new Error('Recompensa não encontrada.');
+    }
+
+    const { title, description, points, isActive } = req.body;
+    if (title !== undefined) reward.title = title;
+    if (description !== undefined) reward.description = description;
+    if (points !== undefined) reward.points = points;
+    if (isActive !== undefined) reward.isActive = isActive;
+
+    const updated = await reward.save();
+    res.json(updated);
+});
+
 exports.getMyRedemptions = asyncHandler(async (req, res) => {
     const redemptions = await Redemption.find({ user: req.user.id })
         .populate('reward', 'title description points')

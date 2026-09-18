@@ -68,3 +68,88 @@ describe('GET /api/reservations/my-reservations', () => {
         expect(res2.body).toHaveLength(0);
     });
 });
+
+describe('GET /api/reservations/:id', () => {
+    test('retorna 404 para reserva inexistente', async () => {
+        const token = await registerAndLogin('detalhe@test.com');
+
+        const res = await request(app)
+            .get('/api/reservations/000000000000000000000000')
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(404);
+    });
+
+    test('o dono vê a reserva com dados do motel', async () => {
+        const token = await registerAndLogin('dono@test.com');
+        const motel = await criarMotel();
+
+        const created = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id });
+
+        const res = await request(app)
+            .get(`/api/reservations/${created.body._id}`)
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(200);
+        expect(res.body.motel.name).toBe('Motel Reserva');
+    });
+
+    test('retorna 403 para outro usuário', async () => {
+        const motel = await criarMotel();
+        const tokenDono = await registerAndLogin('donodeteste@test.com');
+        const tokenOutro = await registerAndLogin('outro@test.com');
+
+        const created = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', tokenDono)
+            .send({ ...corpoBase, motel: motel._id });
+
+        const res = await request(app)
+            .get(`/api/reservations/${created.body._id}`)
+            .set('x-auth-token', tokenOutro);
+
+        expect(res.status).toBe(403);
+    });
+});
+
+describe('PATCH /api/reservations/:id/cancel', () => {
+    test('cancela uma reserva confirmada', async () => {
+        const token = await registerAndLogin('cancela@test.com');
+        const motel = await criarMotel();
+
+        const created = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id });
+
+        const res = await request(app)
+            .patch(`/api/reservations/${created.body._id}/cancel`)
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(200);
+        expect(res.body.status).toBe('Cancelada');
+    });
+
+    test('retorna 400 ao cancelar reserva já cancelada', async () => {
+        const token = await registerAndLogin('cancela2@test.com');
+        const motel = await criarMotel();
+
+        const created = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id });
+
+        await request(app)
+            .patch(`/api/reservations/${created.body._id}/cancel`)
+            .set('x-auth-token', token);
+
+        const res = await request(app)
+            .patch(`/api/reservations/${created.body._id}/cancel`)
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(400);
+    });
+});
