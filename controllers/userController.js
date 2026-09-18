@@ -58,6 +58,15 @@ exports.updateUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (user) {
+        // Verifica duplicidade de e-mail antes de atualizar
+        if (req.body.email && req.body.email !== user.email) {
+            const emailExists = await User.findOne({ email: req.body.email });
+            if (emailExists) {
+                res.status(400);
+                throw new Error('Este e-mail já está em uso.');
+            }
+        }
+
         // Atualiza os campos se eles foram enviados na requisição
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;

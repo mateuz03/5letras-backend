@@ -9,19 +9,33 @@ exports.getAllRewards = asyncHandler(async (req, res) => {
 
 exports.redeemReward = asyncHandler(async (req, res) => {
     const reward = await Reward.findById(req.params.id);
-    const user = await User.findById(req.user.id);
 
     if (!reward) {
         res.status(404);
         throw new Error('Recompensa não encontrada.');
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        res.status(404);
+        throw new Error('Usuário não encontrado.');
     }
     if (user.points < reward.points) {
         res.status(400);
         throw new Error('Pontos insuficientes.');
     }
 
-    user.points -= reward.points;
-    await user.save();
-    
-    res.json({ message: 'Recompensa resgatada com sucesso!', newPoints: user.points });
+    // Atualização atômica: só deduz os pontos se o usuário ainda tiver saldo suficiente
+    const updatedUser = await User.findOneAndUpdate(
+        { _id: req.user.id, points: { $gte: reward.points } },
+        { $inc: { points: -reward.points } },
+        { new: true }
+    );
+
+    if (!updatedUser) {
+        res.status(400);
+        throw new Error('Pontos insuficientes.');
+    }
+
+    res.json({ message: 'Recompensa resgatada com sucesso!', newPoints: updatedUser.points });
 });

@@ -2,6 +2,7 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../index');
 const Motel = require('../models/Motel');
+const { registerAndLogin } = require('./utils');
 
 const motelValido = {
     name: 'Motel Teste',
@@ -11,8 +12,19 @@ const motelValido = {
 };
 
 describe('Rotas de motéis', () => {
-    test('POST /api/motels cria um motel', async () => {
+    test('POST /api/motels retorna 401 sem token', async () => {
         const res = await request(app).post('/api/motels').send(motelValido);
+
+        expect(res.status).toBe(401);
+    });
+
+    test('POST /api/motels cria um motel com token', async () => {
+        const token = await registerAndLogin('admin@test.com');
+
+        const res = await request(app)
+            .post('/api/motels')
+            .set('x-auth-token', token)
+            .send(motelValido);
 
         expect(res.status).toBe(201);
         expect(res.body.name).toBe('Motel Teste');

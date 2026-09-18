@@ -85,6 +85,32 @@ describe('GET /api/users/me', () => {
 });
 
 describe('PUT /api/users/me', () => {
+    test('retorna 400 ao tentar usar e-mail já cadastrado por outro usuário', async () => {
+        const token = await registerAndLogin('fabio@test.com');
+        await request(app)
+            .post('/api/users/register')
+            .send({ name: 'Gabi', email: 'gabi@test.com', password: 'senha123' });
+
+        const res = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ email: 'gabi@test.com' });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('permite manter o próprio e-mail', async () => {
+        const token = await registerAndLogin('helio@test.com');
+
+        const res = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ email: 'helio@test.com', name: 'Hélio Novo' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.email).toBe('helio@test.com');
+    });
+
     test('atualiza o nome', async () => {
         const token = await registerAndLogin('diego@test.com');
 
