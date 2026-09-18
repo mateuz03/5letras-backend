@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const rewardController = require('../controllers/rewardController');
 
 router.get('/', rewardController.getAllRewards);
+router.get('/my-redemptions', auth, rewardController.getMyRedemptions);
 router.post('/redeem/:id', auth, rewardController.redeemReward);
 
 module.exports = router;

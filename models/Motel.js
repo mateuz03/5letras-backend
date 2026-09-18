@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 // Definimos primeiro o "molde" de uma suíte
 const suiteSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    price: { type: String, required: true },
+    price: { type: Number, required: true },
     image: { type: String, required: true },
     amenities: [String] // Uma lista de strings, ex: ["Hidro", "Sauna"]
 });
@@ -16,6 +16,8 @@ const motelSchema = new mongoose.Schema({
     image: { type: String, required: true },
     distance: { type: String },
     description: { type: String },
+    price: { type: String }, // Preço de exibição, ex: "A partir de R$ 120"
+    categories: [String],
     images: [String],
     suites: [suiteSchema] // Um motel tem uma lista de suítes
 });

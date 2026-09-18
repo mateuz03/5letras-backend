@@ -59,6 +59,27 @@ describe('POST /api/reviews', () => {
     });
 });
 
+describe('Rating do motel', () => {
+    test('recalcula o rating do motel com a média das avaliações', async () => {
+        const token1 = await registerAndLogin('aval5@test.com');
+        const token2 = await registerAndLogin('aval6@test.com');
+        const motel = await criarMotel();
+
+        await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token1)
+            .send({ motelId: motel._id.toString(), rating: 5, comment: 'Excelente' });
+
+        await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token2)
+            .send({ motelId: motel._id.toString(), rating: 4, comment: 'Bom' });
+
+        const updated = await Motel.findById(motel._id);
+        expect(updated.rating).toBe(4.5);
+    });
+});
+
 describe('GET /api/reviews/my-reviews', () => {
     test('retorna as avaliações do usuário com o nome do motel', async () => {
         const token = await registerAndLogin('aval4@test.com');

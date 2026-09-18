@@ -67,4 +67,54 @@ describe('POST /api/rewards/redeem/:id', () => {
 
         expect(res.status).toBe(404);
     });
+
+    test('impede resgatar a mesma recompensa duas vezes', async () => {
+        const reward = await Reward.create({ title: 'R', description: 'D', points: 20 });
+        const token = await criarUsuarioComPontos('unico@test.com', 100);
+
+        const first = await request(app)
+            .post(`/api/rewards/redeem/${reward._id}`)
+            .set('x-auth-token', token);
+        expect(first.status).toBe(200);
+
+        const second = await request(app)
+            .post(`/api/rewards/redeem/${reward._id}`)
+            .set('x-auth-token', token);
+        expect(second.status).toBe(400);
+
+        // Pontos deduzidos apenas uma vez
+        const user = await User.findOne({ email: 'unico@test.com' });
+        expect(user.points).toBe(80);
+    });
+});
+
+describe('GET /api/rewards/my-redemptions', () => {
+    test('retorna os resgates do usuário com os dados da recompensa', async () => {
+        const reward = await Reward.create({ title: 'Desconto', description: 'D', points: 20 });
+        const token = await criarUsuarioComPontos('resgata@test.com', 100);
+
+        await request(app)
+            .post(`/api/rewards/redeem/${reward._id}`)
+            .set('x-auth-token', token);
+
+        const res = await request(app)
+            .get('/api/rewards/my-redemptions')
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveLength(1);
+        expect(res.body[0].pointsSpent).toBe(20);
+        expect(res.body[0].reward.title).toBe('Desconto');
+    });
+
+    test('retorna lista vazia para usuário sem resgates', async () => {
+        const token = await criarUsuarioComPontos('semresgates@test.com', 0);
+
+        const res = await request(app)
+            .get('/api/rewards/my-redemptions')
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveLength(0);
+    });
 });
