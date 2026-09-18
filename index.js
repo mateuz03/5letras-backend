@@ -2,12 +2,22 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 require('dotenv').config();
 
 // --- MUDANÇA NA IMPORTAÇÃO ---
 // Antes: const { errorHandler } = require('./middleware/errorHandler');
 // Agora, importamos a função diretamente:
 const errorHandler = require('./middleware/errorHandler');
+
+// Log com timestamp e prefixo único, em todos os ambientes
+const isTest = process.env.NODE_ENV === 'test';
+function log(message) {
+    if (!isTest) console.log(`[${new Date().toISOString()}] [API] ${message}`);
+}
+function logError(message) {
+    if (!isTest) console.error(`[${new Date().toISOString()}] [API][ERRO] ${message}`);
+}
 
 // Importando nossas rotas
 const motelRoutes = require('./routes/motels');
@@ -39,6 +49,11 @@ app.use(cors(allowedOrigins ? { origin: allowedOrigins } : {}));
 
 app.use(express.json());
 
+// Log de requisições HTTP: "tiny" em produção, "dev" (colorido) em desenvolvimento
+if (!isTest) {
+    app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
+}
+
 // Definindo as Rotas da API
 app.get('/', (req, res) => res.send('API do 5Letras está no ar!'));
 
@@ -66,19 +81,25 @@ app.use(errorHandler);
 // Ligando o Servidor e conectando ao banco apenas quando executado diretamente
 // (permite importar o app nos testes com banco de memória)
 if (require.main === module) {
-    // Conectando ao Banco de Dados
+    // Fail fast: sem MONGO_URI o servidor não tem por que subir
     const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+        logError('MONGO_URI não definida. Configure a variável no .env ou no ambiente do deploy e reinicie.');
+        process.exit(1);
+    }
+
     mongoose.connect(mongoUri)
         .then(() => {
-            console.log('✅ Conectado ao MongoDB Atlas!');
+            log('Conectado ao MongoDB Atlas.');
         })
         .catch((err) => {
-            console.error('❌ Erro ao conectar ao MongoDB:', err.message);
+            logError(`Falha ao conectar ao MongoDB: ${err.message}`);
+            process.exit(1);
         });
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
-        console.log(`🚀 Servidor rodando na porta ${PORT}`);
+        log(`Servidor rodando na porta ${PORT} (${process.env.NODE_ENV || 'development'}).`);
     });
 }
 

@@ -1,6 +1,6 @@
 // Middleware de tratamento de erro (PRECISA ter 4 parâmetros)
 function errorHandler(err, req, res, next) {
-  console.error('🔥 Erro na API:', err.message);
+  console.error(`[${new Date().toISOString()}] [API][ERRO] ${req.method} ${req.originalUrl} -> ${err.message}`);
 
   // Prioridade: err.statusCode explícito > statusCode já definido na resposta > 500
   const status = err.statusCode || (res.statusCode >= 400 ? res.statusCode : 500);

@@ -11,6 +11,7 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "testTimeout": 30000,
     "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.js"
     ]
@@ -26,7 +27,8 @@
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.5.1"
+    "mongoose": "^8.5.1",
+    "morgan": "^1.12.1"
   },
   "devDependencies": {
     "jest": "^30.5.1",
