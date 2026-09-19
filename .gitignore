@@ -7,4 +7,5 @@ node_modules
 # Logs de erro
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
+yarn-error.log*# Log do servidor dev-memory  
+dev-memory.log 
