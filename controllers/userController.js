@@ -34,6 +34,36 @@ exports.loginUser = asyncHandler(async (req, res) => {
     }
 });
 
+// GET /api/users/favorites - lista os motéis favoritos do usuário logado
+exports.getFavorites = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id).populate('favorites');
+    if (!user) {
+        res.status(404);
+        throw new Error('Usuário não encontrado.');
+    }
+    res.json(user.favorites);
+});
+
+// POST /api/users/favorites/:motelId - favorita ou remove o motel (toggle)
+exports.toggleFavorite = asyncHandler(async (req, res) => {
+    const { motelId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        res.status(404);
+        throw new Error('Usuário não encontrado.');
+    }
+
+    const index = user.favorites.findIndex((f) => f.toString() === motelId);
+    if (index >= 0) {
+        user.favorites.splice(index, 1);
+    } else {
+        user.favorites.push(motelId);
+    }
+    await user.save();
+
+    res.json({ favorited: index < 0, favorites: user.favorites });
+});
+
 // Ranking dos usuários com mais pontos
 exports.getLeaderboard = asyncHandler(async (req, res) => {
     const users = await User.find()
@@ -52,7 +82,8 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
             name: user.name,
             email: user.email,
             points: user.points,
-            role: user.role
+            role: user.role,
+            favorites: user.favorites
         });
     } else {
         res.status(404);

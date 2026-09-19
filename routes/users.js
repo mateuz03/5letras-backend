@@ -20,4 +20,10 @@ router.put('/me', auth, userController.updateUserProfile);
 // GET /api/users/leaderboard (rota pública) - ranking de pontos
 router.get('/leaderboard', userController.getLeaderboard);
 
+// GET /api/users/favorites (rota protegida) - motéis favoritos do usuário
+router.get('/favorites', auth, userController.getFavorites);
+
+// POST /api/users/favorites/:motelId (rota protegida) - favorita/remove (toggle)
+router.post('/favorites/:motelId', auth, userController.toggleFavorite);
+
 module.exports = router;
