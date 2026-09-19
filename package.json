@@ -7,6 +7,7 @@
     "test": "jest --runInBand",
     "dev": "nodemon index.js",
     "dev:memory": "node scripts/dev-memory.js",
+    "seed": "node scripts/seed.js",
     "start": "node index.js",
     "migrate:prices": "node scripts/migrate-prices.js"
   },

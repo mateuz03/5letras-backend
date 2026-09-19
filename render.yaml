@@ -1,0 +1,20 @@
+# Blueprint do Render — cria o web service do 5letras-backend.
+# No dashboard: New + → Blueprint → selecione o repo mateuz03/5letras-backend.
+services:
+  - type: web
+    name: 5letras-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci
+    startCommand: node index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://5-letras-u0x3xmv.verdent.app
