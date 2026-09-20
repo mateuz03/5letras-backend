@@ -6,7 +6,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm ci
+    buildCommand: npm install
     startCommand: node index.js
     healthCheckPath: /health
     envVars:
