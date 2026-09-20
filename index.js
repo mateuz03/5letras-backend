@@ -65,6 +65,10 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Seed bootstrap: só executa com o banco vazio (depois, sempre 409)
+const seedController = require('./controllers/seedController');
+app.post('/seed', seedController.seedIfEmpty);
+
 app.use('/api/motels', motelRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reservations', reservationRoutes);
