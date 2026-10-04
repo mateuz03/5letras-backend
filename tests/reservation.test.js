@@ -42,6 +42,31 @@ describe('POST /api/reservations', () => {
         expect(res.body.total).toBe(200);
         expect(res.body.status).toBe('Confirmada');
     });
+
+    test('salva a data de check-in informada', async () => {
+        const token = await registerAndLogin('checkin@test.com');
+        const motel = await criarMotel();
+
+        const res = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id, checkIn: '2026-12-25T14:00:00.000Z' });
+
+        expect(res.status).toBe(201);
+        expect(new Date(res.body.checkIn).toISOString()).toBe('2026-12-25T14:00:00.000Z');
+    });
+
+    test('retorna 400 para data de check-in inválida', async () => {
+        const token = await registerAndLogin('checkin2@test.com');
+        const motel = await criarMotel();
+
+        const res = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id, checkIn: 'data-invalida' });
+
+        expect(res.status).toBe(400);
+    });
 });
 
 describe('GET /api/reservations/my-reservations', () => {

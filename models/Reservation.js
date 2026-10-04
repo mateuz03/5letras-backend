@@ -28,6 +28,9 @@ const reservationSchema = new Schema({
         type: Number,
         required: true
     },
+    checkIn: {
+        type: Date
+    },
     bookingDate: {
         type: Date,
         default: Date.now

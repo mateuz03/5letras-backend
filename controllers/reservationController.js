@@ -2,7 +2,16 @@ const asyncHandler = require('express-async-handler');
 const Reservation = require('../models/Reservation');
 
 exports.createReservation = asyncHandler(async (req, res) => {
-    const { motel, suite, period, addons, total } = req.body;
+    const { motel, suite, period, addons, total, checkIn } = req.body;
+
+    let checkInDate;
+    if (checkIn !== undefined) {
+        checkInDate = new Date(checkIn);
+        if (Number.isNaN(checkInDate.getTime())) {
+            res.status(400);
+            throw new Error('Data de check-in inválida.');
+        }
+    }
 
     const newReservation = new Reservation({
         motel,
@@ -10,6 +19,7 @@ exports.createReservation = asyncHandler(async (req, res) => {
         period,
         addons,
         total,
+        checkIn: checkInDate,
         user: req.user.id
     });
 
