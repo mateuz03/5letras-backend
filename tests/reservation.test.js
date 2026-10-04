@@ -67,6 +67,19 @@ describe('POST /api/reservations', () => {
 
         expect(res.status).toBe(400);
     });
+
+    test('acumula pontos por estadia (1 ponto a cada R$10)', async () => {
+        const token = await registerAndLogin('pontos@test.com');
+        const motel = await criarMotel();
+
+        const res = await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ ...corpoBase, motel: motel._id });
+
+        expect(res.status).toBe(201);
+        expect(res.body.pointsEarned).toBe(20);
+    });
 });
 
 describe('GET /api/reservations/my-reservations', () => {

@@ -1,5 +1,13 @@
 const asyncHandler = require('express-async-handler');
 const Reservation = require('../models/Reservation');
+const User = require('../models/User');
+
+// Pontos por estadia: 1 ponto a cada R$10 de total
+function calcularPontos(total) {
+    const totalNum = Number(total);
+    if (!Number.isFinite(totalNum) || totalNum <= 0) return 0;
+    return Math.floor(totalNum / 10);
+}
 
 exports.createReservation = asyncHandler(async (req, res) => {
     const { motel, suite, period, addons, total, checkIn } = req.body;
@@ -24,7 +32,13 @@ exports.createReservation = asyncHandler(async (req, res) => {
     });
 
     const reservation = await newReservation.save();
-    res.status(201).json(reservation);
+
+    const pointsEarned = calcularPontos(total);
+    if (pointsEarned > 0) {
+        await User.findByIdAndUpdate(req.user.id, { $inc: { points: pointsEarned } });
+    }
+
+    res.status(201).json({ ...reservation.toObject(), pointsEarned });
 });
 
 exports.getMyReservations = asyncHandler(async (req, res) => {
