@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../index');
 const User = require('../models/User');
+const Motel = require('../models/Motel');
 const { registerAndLogin } = require('./utils');
 
 describe('POST /api/users/register', () => {
@@ -164,5 +165,49 @@ describe('PUT /api/users/me', () => {
             .post('/api/users/login')
             .send({ email: 'elisa@test.com', password: 'novaSenha456' });
         expect(login.status).toBe(200);
+    });
+});
+
+describe('Favoritos', () => {
+    async function criarMotel(nome) {
+        return Motel.create({ name: nome, location: 'São Paulo, SP', image: 'http://imagem.com/foto.jpg', suites: [] });
+    }
+
+    test('GET /api/users/favorites retorna os motéis favoritos do usuário', async () => {
+        const token = await registerAndLogin('fav1@test.com');
+        const motel = await criarMotel('Motel Favorito');
+
+        await request(app)
+            .post(`/api/users/favorites/${motel._id}`)
+            .set('x-auth-token', token);
+
+        const res = await request(app)
+            .get('/api/users/favorites')
+            .set('x-auth-token', token);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveLength(1);
+        expect(res.body[0].name).toBe('Motel Favorito');
+    });
+
+    test('POST /api/users/favorites/:id desfavorita quando já é favorito', async () => {
+        const token = await registerAndLogin('fav2@test.com');
+        const motel = await criarMotel('Motel Temp');
+
+        await request(app)
+            .post(`/api/users/favorites/${motel._id}`)
+            .set('x-auth-token', token);
+
+        const remove = await request(app)
+            .post(`/api/users/favorites/${motel._id}`)
+            .set('x-auth-token', token);
+
+        expect(remove.status).toBe(200);
+        expect(remove.body.favorited).toBe(false);
+
+        const res = await request(app)
+            .get('/api/users/favorites')
+            .set('x-auth-token', token);
+        expect(res.body).toHaveLength(0);
     });
 });
