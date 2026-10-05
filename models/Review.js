@@ -28,6 +28,14 @@ const reviewSchema = new Schema({
         trim: true,
         maxlength: [1000, 'O comentário não pode exceder 1000 caracteres.']
     },
+    suiteName: {
+        type: String,
+        trim: true
+    },
+    reservation: {
+        type: Schema.Types.ObjectId,
+        ref: 'Reservation'
+    },
     createdAt: {
         type: Date,
         default: Date.now

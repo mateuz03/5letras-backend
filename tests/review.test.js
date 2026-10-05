@@ -35,6 +35,26 @@ describe('POST /api/reviews', () => {
         expect(res.body.rating).toBe(4);
     });
 
+    test('cria avaliação vinculada a uma reserva e suíte', async () => {
+        const token = await registerAndLogin('aval-suite@test.com');
+        const motel = await criarMotel();
+
+        const res = await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token)
+            .send({
+                motelId: motel._id.toString(),
+                rating: 5,
+                comment: 'Incrível',
+                reservationId: '000000000000000000000000',
+                suiteName: 'Suíte Luxo'
+            });
+
+        expect(res.status).toBe(201);
+        expect(res.body.suiteName).toBe('Suíte Luxo');
+        expect(res.body.reservation).toBe('000000000000000000000000');
+    });
+
     test('retorna 400 quando faltam campos', async () => {
         const token = await registerAndLogin('aval2@test.com');
 
@@ -56,6 +76,24 @@ describe('POST /api/reviews', () => {
             .send({ motelId: motel._id.toString(), rating: 6, comment: 'X' });
 
         expect(res.status).toBe(500);
+    });
+});
+
+describe('GET /api/reviews?motelId=', () => {
+    test('retorna as avaliações de um motel com dados do usuário', async () => {
+        const token = await registerAndLogin('aval-pub@test.com');
+        const motel = await criarMotel();
+
+        await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token)
+            .send({ motelId: motel._id.toString(), rating: 4, comment: 'Bom' });
+
+        const res = await request(app).get(`/api/reviews?motelId=${motel._id}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveLength(1);
+        expect(res.body[0].user.name).toBeDefined();
     });
 });
 

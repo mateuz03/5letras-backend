@@ -19,7 +19,7 @@ async function updateMotelRating(motelId) {
 }
 
 exports.createReview = asyncHandler(async (req, res) => {
-    const { motelId, rating, comment } = req.body;
+    const { motelId, rating, comment, reservationId, suiteName } = req.body;
 
     if (!motelId || !rating || !comment) {
         res.status(400);
@@ -29,6 +29,8 @@ exports.createReview = asyncHandler(async (req, res) => {
         motel: motelId,
         rating,
         comment,
+        suiteName,
+        reservation: reservationId || undefined,
         user: req.user.id
     });
     const review = await newReview.save();
@@ -37,6 +39,19 @@ exports.createReview = asyncHandler(async (req, res) => {
     await updateMotelRating(motelId);
 
     res.status(201).json(review);
+});
+
+exports.getReviewsByMotel = asyncHandler(async (req, res) => {
+    const { motelId } = req.query;
+    if (!motelId) {
+        res.status(400);
+        throw new Error('motelId é obrigatório.');
+    }
+
+    const reviews = await Review.find({ motel: motelId })
+        .populate('user', 'name')
+        .sort({ createdAt: -1 });
+    res.json(reviews);
 });
 
 exports.getMyReviews = asyncHandler(async (req, res) => {

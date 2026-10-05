@@ -42,7 +42,9 @@ exports.createReservation = asyncHandler(async (req, res) => {
 });
 
 exports.getMyReservations = asyncHandler(async (req, res) => {
-    const reservations = await Reservation.find({ user: req.user.id }).sort({ bookingDate: -1 });
+    const reservations = await Reservation.find({ user: req.user.id })
+        .populate('motel', 'name location image')
+        .sort({ bookingDate: -1 });
     res.json(reservations);
 });
 
