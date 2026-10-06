@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Reservation = require('../models/Reservation');
+const Review = require('../models/Review');
 
 // Lógica de Cadastro
 exports.registerUser = asyncHandler(async (req, res) => {
@@ -93,43 +95,83 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
 // --- FUNÇÃO ADICIONADA ---
 // PUT /api/users/me
-// Atualiza os dados do usuário logado
+// Atualiza os dados do usuário logado.
+// Trocas sensíveis (e-mail/senha) exigem a senha atual.
 exports.updateUserProfile = asyncHandler(async (req, res) => {
     // Encontra o usuário pelo ID que está no token
     const user = await User.findById(req.user.id);
 
-    if (user) {
-        // Verifica duplicidade de e-mail antes de atualizar
-        if (req.body.email && req.body.email !== user.email) {
-            const emailExists = await User.findOne({ email: req.body.email });
-            if (emailExists) {
-                res.status(400);
-                throw new Error('Este e-mail já está em uso.');
-            }
-        }
-
-        // Atualiza os campos se eles foram enviados na requisição
-        user.name = req.body.name || user.name;
-        user.email = req.body.email || user.email;
-
-        // Verifica se o usuário está tentando atualizar a senha
-        if (req.body.password) {
-            user.password = req.body.password;
-        }
-
-        // Salva o usuário atualizado. O Mongoose vai re-criptografar a senha se ela foi mudada.
-        const updatedUser = await user.save();
-
-        // Retorna os novos dados (sem a senha)
-        res.json({
-            _id: updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            points: updatedUser.points,
-            role: updatedUser.role,
-        });
-    } else {
+    if (!user) {
         res.status(404);
         throw new Error('Usuário não encontrado.');
     }
+
+    const { name, email, password, currentPassword } = req.body;
+    const mudancaSensivel = Boolean((email && email !== user.email) || password);
+
+    // Trocas sensíveis exigem confirmação da senha atual
+    if (mudancaSensivel) {
+        if (!currentPassword) {
+            res.status(400);
+            throw new Error('Informe sua senha atual para alterar e-mail ou senha.');
+        }
+        const senhaConfere = await bcrypt.compare(currentPassword, user.password);
+        if (!senhaConfere) {
+            res.status(401);
+            throw new Error('Senha atual incorreta.');
+        }
+    }
+
+    // Verifica duplicidade de e-mail antes de atualizar
+    if (email && email !== user.email) {
+        const emailExists = await User.findOne({ email });
+        if (emailExists) {
+            res.status(400);
+            throw new Error('Este e-mail já está em uso.');
+        }
+    }
+
+    // Atualiza apenas campos realmente informados
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password;
+
+    const updatedUser = await user.save();
+
+    res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        points: updatedUser.points,
+        role: updatedUser.role,
+    });
+});
+
+// DELETE /api/users/me
+// Exclui a conta do usuário logado (LGPD), exigindo a senha atual.
+// Remove também reservas e avaliações associadas.
+exports.deleteAccount = asyncHandler(async (req, res) => {
+    const { currentPassword } = req.body || {};
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error('Usuário não encontrado.');
+    }
+
+    if (!currentPassword) {
+        res.status(400);
+        throw new Error('Informe sua senha para excluir a conta.');
+    }
+    const senhaConfere = await bcrypt.compare(currentPassword, user.password);
+    if (!senhaConfere) {
+        res.status(401);
+        throw new Error('Senha incorreta.');
+    }
+
+    await Reservation.deleteMany({ user: user._id });
+    await Review.deleteMany({ user: user._id });
+    await user.deleteOne();
+
+    res.json({ message: 'Conta excluída com sucesso.' });
 });

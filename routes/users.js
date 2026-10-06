@@ -12,10 +12,12 @@ router.post('/login', userController.loginUser);
 // GET /api/users/me (rota protegida)
 router.get('/me', auth, userController.getUserProfile);
 
-// --- ROTA ADICIONADA ---
 // PUT /api/users/me (rota protegida)
 // Usamos a mesma rota '/me', mas com o método PUT
 router.put('/me', auth, userController.updateUserProfile);
+
+// DELETE /api/users/me (rota protegida) - exclui a conta (LGPD)
+router.delete('/me', auth, userController.deleteAccount);
 
 // GET /api/users/leaderboard (rota pública) - ranking de pontos
 router.get('/leaderboard', userController.getLeaderboard);

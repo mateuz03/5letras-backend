@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../index');
 const User = require('../models/User');
 const Motel = require('../models/Motel');
+const Reservation = require('../models/Reservation');
 const { registerAndLogin } = require('./utils');
 
 describe('POST /api/users/register', () => {
@@ -123,9 +124,32 @@ describe('PUT /api/users/me', () => {
         const res = await request(app)
             .put('/api/users/me')
             .set('x-auth-token', token)
-            .send({ email: 'gabi@test.com' });
+            .send({ email: 'gabi@test.com', currentPassword: 'senha123' });
 
         expect(res.status).toBe(400);
+    });
+
+    test('exige a senha atual para trocar o e-mail', async () => {
+        const token = await registerAndLogin('sensivel1@test.com');
+
+        const semSenha = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ email: 'novo1@test.com' });
+        expect(semSenha.status).toBe(400);
+
+        const senhaErrada = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ email: 'novo1@test.com', currentPassword: 'errada123' });
+        expect(senhaErrada.status).toBe(401);
+
+        const correta = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ email: 'novo1@test.com', currentPassword: 'senha123' });
+        expect(correta.status).toBe(200);
+        expect(correta.body.email).toBe('novo1@test.com');
     });
 
     test('permite manter o próprio e-mail', async () => {
@@ -140,7 +164,7 @@ describe('PUT /api/users/me', () => {
         expect(res.body.email).toBe('helio@test.com');
     });
 
-    test('atualiza o nome', async () => {
+    test('atualiza o nome sem exigir senha atual', async () => {
         const token = await registerAndLogin('diego@test.com');
 
         const res = await request(app)
@@ -152,19 +176,74 @@ describe('PUT /api/users/me', () => {
         expect(res.body.name).toBe('Diego Silva');
     });
 
-    test('atualiza a senha e a nova senha funciona no login', async () => {
+    test('atualiza a senha (com senha atual) e a nova funciona no login', async () => {
         const token = await registerAndLogin('elisa@test.com');
+
+        const errada = await request(app)
+            .put('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ password: 'novaSenha456', currentPassword: 'errada' });
+        expect(errada.status).toBe(401);
 
         const res = await request(app)
             .put('/api/users/me')
             .set('x-auth-token', token)
-            .send({ password: 'novaSenha456' });
+            .send({ password: 'novaSenha456', currentPassword: 'senha123' });
         expect(res.status).toBe(200);
 
         const login = await request(app)
             .post('/api/users/login')
             .send({ email: 'elisa@test.com', password: 'novaSenha456' });
         expect(login.status).toBe(200);
+    });
+});
+
+describe('DELETE /api/users/me', () => {
+    test('exige a senha atual', async () => {
+        const token = await registerAndLogin('del1@test.com');
+
+        const semSenha = await request(app)
+            .delete('/api/users/me')
+            .set('x-auth-token', token)
+            .send({});
+        expect(semSenha.status).toBe(400);
+
+        const errada = await request(app)
+            .delete('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ currentPassword: 'errada' });
+        expect(errada.status).toBe(401);
+    });
+
+    test('exclui a conta, reservas e avaliações, e invalida o login', async () => {
+        const token = await registerAndLogin('del2@test.com');
+        const motel = await Motel.create({ name: 'Motel Del', location: 'SP', image: 'http://imagem.com/x.jpg', suites: [] });
+        await request(app)
+            .post('/api/reservations')
+            .set('x-auth-token', token)
+            .send({ motel: motel._id.toString(), suite: { name: 'Suíte A' }, period: { label: '4 horas', price: 200 }, total: 200 });
+        await request(app)
+            .post('/api/reviews')
+            .set('x-auth-token', token)
+            .send({ motelId: motel._id.toString(), rating: 4, comment: 'Bom' });
+
+        const res = await request(app)
+            .delete('/api/users/me')
+            .set('x-auth-token', token)
+            .send({ currentPassword: 'senha123' });
+        expect(res.status).toBe(200);
+
+        const user = await User.findOne({ email: 'del2@test.com' });
+        expect(user).toBeNull();
+
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf-8'));
+        const reservations = await Reservation.find({ user: payload.user.id });
+        expect(reservations).toHaveLength(0);
+
+        const login = await request(app)
+            .post('/api/users/login')
+            .send({ email: 'del2@test.com', password: 'senha123' });
+        expect(login.status).toBe(401);
     });
 });
 
